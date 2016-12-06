@@ -7,7 +7,10 @@
 
 #include <cmath>
 
+#include <algorithm>
+#include <iterator>
 #include <limits>
+#include <numeric>
 #include <utility>
 
 namespace osrm
@@ -356,6 +359,92 @@ leastSquareRegression(const std::vector<util::Coordinate> &coordinates)
         toFixed(util::FloatLatitude(GetLatAtLon(util::FloatLongitude{max_lon + 1})))};
 
     return {regression_first, regression_end};
+}
+
+// find the closest distance between a coordinate and a segment
+double findClosestDistance(const Coordinate coordinate,
+                           const Coordinate segment_begin,
+                           const Coordinate segment_end)
+{
+    return haversineDistance(coordinate,
+                             projectPointOnSegment(segment_begin, segment_end, coordinate).second);
+}
+
+// find the closest distance between a coordinate and a set of coordinates
+double findClosestDistance(const Coordinate coordinate,
+                           const std::vector<util::Coordinate> &coordinates)
+{
+    double current_min = std::numeric_limits<double>::max();
+
+    // comparator updating current_min without ever finding an element
+    const auto compute_minimum_distance = [&current_min, coordinate](const Coordinate lhs,
+                                                                     const Coordinate rhs) {
+        current_min = std::min(current_min, findClosestDistance(coordinate, lhs, rhs));
+        return false;
+    };
+
+    std::adjacent_find(std::begin(coordinates), std::end(coordinates), compute_minimum_distance);
+    return current_min;
+}
+
+// find the closes distance between two sets of coordinates
+double findClosestDistance(const std::vector<util::Coordinate> &lhs,
+                           const std::vector<util::Coordinate> &rhs)
+{
+    double current_min = std::numeric_limits<double>::max();
+
+    const auto compute_minimum_distance_in_rhs = [&current_min, &rhs](const Coordinate coordinate) {
+        current_min = std::min(current_min, findClosestDistance(coordinate, rhs));
+        return false;
+    };
+
+    std::find_if(std::begin(lhs), std::end(lhs), compute_minimum_distance_in_rhs);
+    return current_min;
+}
+
+std::vector<double> getDeviations(const std::vector<util::Coordinate> &from,
+                                  const std::vector<util::Coordinate> &to)
+{
+    auto find_deviation = [&to](const util::Coordinate coordinate) {
+        return findClosestDistance(coordinate, to);
+    };
+
+    std::vector<double> deviations_from;
+    deviations_from.reserve(from.size());
+    std::transform(
+        std::begin(from), std::end(from), std::back_inserter(deviations_from), find_deviation);
+
+    return deviations_from;
+}
+
+bool areParallel(const std::vector<util::Coordinate> &lhs, const std::vector<util::Coordinate> &rhs)
+{
+    const auto regression_lhs = leastSquareRegression(lhs);
+    const auto regression_rhs = leastSquareRegression(rhs);
+
+    auto get_slope = [](const util::Coordinate from, const util::Coordinate to) {
+        const auto diff_lat = static_cast<int>(from.lat) - static_cast<int>(to.lat);
+        const auto diff_lon = static_cast<int>(from.lon) - static_cast<int>(to.lon);
+        if (diff_lon == 0)
+            return std::numeric_limits<double>::max();
+        return static_cast<double>(diff_lat) / static_cast<double>(diff_lon);
+    };
+
+    const auto slope_lhs = get_slope(regression_lhs.first, regression_lhs.second);
+    const auto slope_rhs = get_slope(regression_rhs.first, regression_rhs.second);
+
+    const auto compute_ratio = [](auto dividend, auto divisor) {
+        if (std::abs(dividend) < std::abs(divisor))
+            std::swap(dividend, divisor);
+        auto save_divisor = (std::abs(divisor) < std::numeric_limits<decltype(divisor)>::epsilon())
+                                ? std::numeric_limits<decltype(divisor)>::epsilon()
+                                : divisor;
+        return dividend / save_divisor;
+    };
+
+    const auto ratio = compute_ratio(slope_lhs, slope_rhs);
+    // for small values, ratios are easily off, so we use absolute differences for them
+    return ratio < 1.15 || std::abs(slope_lhs - slope_rhs) < 0.3;
 }
 
 } // ns coordinate_calculation

@@ -1,17 +1,16 @@
 #ifndef OSRM_EXTRACTOR_GUIDANCE_INTERSECTION_NORMALIZER_HPP_
 #define OSRM_EXTRACTOR_GUIDANCE_INTERSECTION_NORMALIZER_HPP_
 
-#include "util/typedefs.hpp"
-
 #include "util/attributes.hpp"
+#include "util/name_table.hpp"
+#include "util/typedefs.hpp"
 
 #include "extractor/guidance/coordinate_extractor.hpp"
 #include "extractor/guidance/intersection.hpp"
 #include "extractor/guidance/intersection_generator.hpp"
+#include "extractor/guidance/mergable_road_detector.hpp"
 #include "extractor/query_node.hpp"
-
 #include "extractor/suffix_table.hpp"
-#include "util/name_table.hpp"
 
 #include <utility>
 #include <vector>
@@ -51,11 +50,11 @@ class IntersectionNormalizer
 
   private:
     const util::NodeBasedDynamicGraph &node_based_graph;
-    const std::vector<extractor::QueryNode> &node_coordinates;
     const util::NameTable &name_table;
     const SuffixTable &street_name_suffix_table;
 
     const IntersectionGenerator &intersection_generator;
+    const MergableRoadDetector mergable_road_detector;
 
     /* check if two indices in an intersection can be seen as a single road in the perceived
      * intersection representation. See below for an example. Utility function for

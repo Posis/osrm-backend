@@ -1,5 +1,6 @@
 #include "extractor/guidance/turn_discovery.hpp"
 #include "extractor/guidance/constants.hpp"
+#include "util/bearing.hpp"
 #include "util/coordinate_calculation.hpp"
 
 using osrm::util::angularDeviation;

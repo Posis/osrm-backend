@@ -34,7 +34,7 @@ void ConnectedRoad::mirror()
                       DirectionModifier::MaxDirectionModifier,
                   "The list of mirrored modifiers needs to match the available modifiers in size.");
 
-    if (angularDeviation(angle, 0) > std::numeric_limits<double>::epsilon())
+    if (util::angularDeviation(angle, 0) > std::numeric_limits<double>::epsilon())
     {
         angle = 360 - angle;
         instruction.direction_modifier = mirrored_modifiers[instruction.direction_modifier];

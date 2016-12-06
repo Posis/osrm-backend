@@ -73,7 +73,7 @@ class IntersectionGenerator
     // the node reached from `from_node` via `via_eid`. The resulting candidates have to be analysed
     // for their actual instructions later on.
     // The switch for `use_low_precision_angles` enables a faster mode that will procude less
-    // accurate coordinates. It should be good enough to check order of turns, find striaghtmost
+    // accurate coordinates. It should be good enough to check order of turns, find straightmost
     // turns. Even good enough to do some simple angle verifications. It is mostly available to
     // allow for faster graph traversal in the extraction phase.
     OSRM_ATTR_WARN_UNUSED

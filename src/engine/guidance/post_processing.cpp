@@ -300,8 +300,8 @@ void closeOffRoundabout(const bool on_roundabout,
                              TurnType::EnterRoundaboutIntersectionAtExit)
                 {
                     BOOST_ASSERT(!propagation_step.intersections.empty());
-                    const double angle = util::angleBetweenBearings(
-                        util::reverseBearing(entry_intersection.bearings[entry_intersection.in]),
+                    const double angle = util::bearing::angleBetween(
+                        util::bearing::reverse(entry_intersection.bearings[entry_intersection.in]),
                         exit_bearing);
 
                     auto bearings = propagation_step.intersections.front().bearings;
@@ -346,7 +346,7 @@ bool isUTurn(const RouteStep &in_step, const RouteStep &out_step, const RouteSte
         (isLinkroad(in_step) && out_step.name_id != EMPTY_NAMEID &&
          pre_in_step.name_id != EMPTY_NAMEID && !isNoticeableNameChange(pre_in_step, out_step));
     const bool takes_u_turn = bearingsAreReversed(
-        util::reverseBearing(
+        util::bearing::reverse(
             in_step.intersections.front().bearings[in_step.intersections.front().in]),
         out_step.intersections.front().bearings[out_step.intersections.front().out]);
 
@@ -357,21 +357,21 @@ double findTotalTurnAngle(const RouteStep &entry_step, const RouteStep &exit_ste
 {
     const auto exit_intersection = exit_step.intersections.front();
     const auto exit_step_exit_bearing = exit_intersection.bearings[exit_intersection.out];
-    const auto exit_step_entry_bearing =
-        util::reverseBearing(exit_intersection.bearings[exit_intersection.in]);
+    const auto exit_step_entry_bearing = 
+        util::bearing::reverse(exit_intersection.bearings[exit_intersection.in]);
 
     const auto entry_intersection = entry_step.intersections.front();
     const auto entry_step_entry_bearing =
-        util::reverseBearing(entry_intersection.bearings[entry_intersection.in]);
+        util::bearing::reverse(entry_intersection.bearings[entry_intersection.in]);
     const auto entry_step_exit_bearing = entry_intersection.bearings[entry_intersection.out];
 
     const auto exit_angle =
-        util::angleBetweenBearings(exit_step_entry_bearing, exit_step_exit_bearing);
+        util::bearing::angleBetween(exit_step_entry_bearing, exit_step_exit_bearing);
     const auto entry_angle =
-        util::angleBetweenBearings(entry_step_entry_bearing, entry_step_exit_bearing);
+        util::bearing::angleBetween(entry_step_entry_bearing, entry_step_exit_bearing);
 
     const double total_angle =
-        util::angleBetweenBearings(entry_step_entry_bearing, exit_step_exit_bearing);
+        util::bearing::angleBetween(entry_step_entry_bearing, exit_step_exit_bearing);
     // We allow for minor deviations from a straight line
     if (((entry_step.distance < MAX_COLLAPSE_DISTANCE && exit_step.intersections.size() == 1) ||
          (entry_angle <= 185 && exit_angle <= 185) || (entry_angle >= 175 && exit_angle >= 175)) &&
@@ -572,18 +572,18 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
             if (continue_or_suppressed || turning_name)
             {
                 const auto in_bearing = [](const RouteStep &step) {
-                    return util::reverseBearing(
+                    return util::bearing::reverse(
                         step.intersections.front().bearings[step.intersections.front().in]);
                 };
                 const auto out_bearing = [](const RouteStep &step) {
                     return step.intersections.front().bearings[step.intersections.front().out];
                 };
 
-                const auto first_angle = util::angleBetweenBearings(in_bearing(one_back_step),
-                                                                    out_bearing(one_back_step));
-                const auto second_angle =
-                    util::angleBetweenBearings(in_bearing(current_step), out_bearing(current_step));
-                const auto bearing_turn_angle = util::angleBetweenBearings(
+                const auto first_angle = util::bearing::angleBetween(in_bearing(one_back_step),
+                                                                     out_bearing(one_back_step));
+                const auto second_angle = util::bearing::angleBetween(in_bearing(current_step),
+                                                                      out_bearing(current_step));
+                const auto bearing_turn_angle = util::bearing::angleBetween(
                     in_bearing(one_back_step), out_bearing(current_step));
 
                 // When looking at an intersection, some angles, even though present, feel more like
@@ -717,7 +717,7 @@ void collapseTurnAt(std::vector<RouteStep> &steps,
             };
 
             // If we Merge onto the same street, we end up with a u-turn in some cases
-            if (bearingsAreReversed(util::reverseBearing(getBearing(true, one_back_step)),
+            if (bearingsAreReversed(util::bearing::reverse(getBearing(true, one_back_step)),
                                     getBearing(false, current_step)))
             {
                 steps[one_back_index].maneuver.instruction.direction_modifier =
@@ -802,7 +802,7 @@ bool isStaggeredIntersection(const std::vector<RouteStep> &steps,
         const auto &intersection = step.intersections.front();
         const auto entry_bearing = intersection.bearings[intersection.in];
         const auto exit_bearing = intersection.bearings[intersection.out];
-        return util::angleBetweenBearings(entry_bearing, exit_bearing);
+        return util::bearing::angleBetween(entry_bearing, exit_bearing);
     };
 
     // Instead of using turn modifiers (e.g. as in isRightTurn) we want to be more strict here.
@@ -1462,7 +1462,7 @@ void trimShortSegments(std::vector<RouteStep> &steps, LegGeometry &geometry)
             geometry.locations[next_to_last_step.geometry_end - 2],
             geometry.locations[last_step.geometry_begin]));
         last_step.maneuver.bearing_before = bearing;
-        last_step.intersections.front().bearings.front() = util::reverseBearing(bearing);
+        last_step.intersections.front().bearings.front() = util::bearing::reverse(bearing);
     }
 
     BOOST_ASSERT(steps.back().geometry_end == geometry.locations.size());

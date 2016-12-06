@@ -8,6 +8,10 @@
 
 using osrm::util::angularDeviation;
 
+#include "extractor/geojson_debug_policies.hpp"
+#include "util/geojson_debug_logger.hpp"
+#include "util/geojson_debug_policies.hpp"
+
 namespace osrm
 {
 namespace extractor
@@ -21,17 +25,39 @@ IntersectionNormalizer::IntersectionNormalizer(
     const util::NameTable &name_table,
     const SuffixTable &street_name_suffix_table,
     const IntersectionGenerator &intersection_generator)
-    : node_based_graph(node_based_graph), node_coordinates(node_coordinates),
-      name_table(name_table), street_name_suffix_table(street_name_suffix_table),
-      intersection_generator(intersection_generator)
+    : node_based_graph(node_based_graph), name_table(name_table),
+      street_name_suffix_table(street_name_suffix_table),
+      intersection_generator(intersection_generator),
+      mergable_road_detector(node_based_graph,
+                             node_coordinates,
+                             intersection_generator,
+                             intersection_generator.GetCoordinateExtractor())
 {
 }
 
 std::pair<IntersectionShape, std::vector<std::pair<EdgeID, EdgeID>>> IntersectionNormalizer::
 operator()(const NodeID node_at_intersection, IntersectionShape intersection) const
 {
+    const auto intersection_copy = intersection;;
     auto merged_shape_and_merges =
         MergeSegregatedRoads(node_at_intersection, std::move(intersection));
+    if (!merged_shape_and_merges.second.empty())
+    {
+        IntersectionShape reduced_shape;
+        for (auto road : intersection_copy)
+        {
+            if (merged_shape_and_merges.second.end() !=
+                std::find_if(merged_shape_and_merges.second.begin(),
+                             merged_shape_and_merges.second.end(),
+                             [road](const auto &val) {
+                                 return road.eid == val.first || road.eid == val.second;
+                             }))
+                reduced_shape.push_back(road);
+        }
+        util::ScopedGeojsonLoggerGuard<extractor::IntersectionShapePrinter>::Write(
+            node_at_intersection, reduced_shape);
+    }
+
     merged_shape_and_merges.first = AdjustBearingsForMergeAtDestination(
         node_at_intersection, std::move(merged_shape_and_merges.first));
     return merged_shape_and_merges;
@@ -80,6 +106,10 @@ bool IntersectionNormalizer::InnerCanMerge(const NodeID node_at_intersection,
     const auto &first_data = node_based_graph.GetEdgeData(intersection[first_index].eid);
     const auto &second_data = node_based_graph.GetEdgeData(intersection[second_index].eid);
 
+    // don't merge on degree two, since it's most likely a bollard/traffic light or a round way
+    if (intersection.size() <= 2)
+        return false;
+
     // only merge named ids
     if (first_data.name_id == EMPTY_NAMEID || second_data.name_id == EMPTY_NAMEID)
         return false;
@@ -93,106 +123,8 @@ bool IntersectionNormalizer::InnerCanMerge(const NodeID node_at_intersection,
             second_data.name_id, first_data.name_id, name_table, street_name_suffix_table))
         return false;
 
-    // compatibility is required
-    if (first_data.travel_mode != second_data.travel_mode)
-        return false;
-    if (first_data.road_classification != second_data.road_classification)
-        return false;
-
-    // may not be on a roundabout
-    if (first_data.roundabout || second_data.roundabout || first_data.circular ||
-        second_data.circular)
-        return false;
-
-    // exactly one of them has to be reversed
-    if (first_data.reversed == second_data.reversed)
-        return false;
-
-    // mergeable if the angle is not too big
-    const auto angle_between =
-        angularDeviation(intersection[first_index].bearing, intersection[second_index].bearing);
-
-    const auto coordinate_at_intersection = node_coordinates[node_at_intersection];
-
-    if (angle_between >= 120)
-        return false;
-
-    const auto isValidYArm = [this, intersection, coordinate_at_intersection, node_at_intersection](
-        const std::size_t index, const std::size_t other_index) {
-        const auto GetActualTarget = [&](const std::size_t index) {
-            EdgeID edge_id;
-            std::tie(std::ignore, edge_id) = intersection_generator.SkipDegreeTwoNodes(
-                node_at_intersection, intersection[index].eid);
-            return node_based_graph.GetTarget(edge_id);
-        };
-
-        const auto target_id = GetActualTarget(index);
-        const auto other_target_id = GetActualTarget(other_index);
-        if (target_id == node_at_intersection || other_target_id == node_at_intersection)
-            return false;
-
-        const auto coordinate_at_target = node_coordinates[target_id];
-        const auto coordinate_at_other_target = node_coordinates[other_target_id];
-
-        const auto turn_bearing =
-            util::coordinate_calculation::bearing(coordinate_at_intersection, coordinate_at_target);
-        const auto other_turn_bearing = util::coordinate_calculation::bearing(
-            coordinate_at_intersection, coordinate_at_other_target);
-
-        // fuzzy becomes narrower due to minor differences in angle computations, yay floating point
-        const bool becomes_narrower =
-            angularDeviation(turn_bearing, other_turn_bearing) < NARROW_TURN_ANGLE &&
-            angularDeviation(turn_bearing, other_turn_bearing) <=
-                angularDeviation(intersection[index].bearing, intersection[other_index].bearing) +
-                    MAXIMAL_ALLOWED_NO_TURN_DEVIATION;
-
-        return becomes_narrower;
-    };
-
-    const bool is_y_arm_first = isValidYArm(first_index, second_index);
-    const bool is_y_arm_second = isValidYArm(second_index, first_index);
-
-    // Only merge valid y-arms
-    if (!is_y_arm_first || !is_y_arm_second)
-        return false;
-
-    if (angle_between < 60)
-        return true;
-
-    // Finally, we also allow merging if all streets offer the same name, it is only three roads and
-    // the angle is not fully extreme:
-    if (intersection.size() != 3)
-        return false;
-
-    // since we have an intersection of size three now, there is only one index we are not looking
-    // at right now. The final index in the intersection is calculated next:
-    const std::size_t third_index = [first_index, second_index]() {
-        if (first_index == 0)
-            return second_index == 2 ? 1 : 2;
-        else if (first_index == 1)
-            return second_index == 2 ? 0 : 2;
-        else
-            return second_index == 1 ? 0 : 1;
-    }();
-
-    // needs to be same road coming in
-    const auto &third_data = node_based_graph.GetEdgeData(intersection[third_index].eid);
-
-    if (third_data.name_id != EMPTY_NAMEID &&
-        util::guidance::requiresNameAnnounced(
-            third_data.name_id, first_data.name_id, name_table, street_name_suffix_table))
-        return false;
-
-    // we only allow collapsing of a Y like fork. So the angle to the third index has to be
-    // roughly equal:
-    const auto y_angle_difference = angularDeviation(
-        angularDeviation(intersection[third_index].bearing, intersection[first_index].bearing),
-        angularDeviation(intersection[third_index].bearing, intersection[second_index].bearing));
-    // Allow larger angles if its three roads only of the same name
-    // This is a heuristic and might need to be revised.
-    const bool assume_y_intersection =
-        angle_between < 100 && y_angle_difference < FUZZY_ANGLE_DIFFERENCE;
-    return assume_y_intersection;
+    return mergable_road_detector.CanMergeRoad(
+            node_at_intersection, intersection[first_index], intersection[second_index]);
 }
 
 /*
@@ -270,6 +202,8 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
     if (intersection.size() <= 1)
         return std::make_pair(intersection, merging_map);
 
+    bool merged = false;
+    const auto intersection_copy = intersection;
     // check for merges including the basic u-turn
     // these result in an adjustment of all other angles. This is due to how these angles are
     // perceived. Considering the following example:
@@ -311,12 +245,14 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
         // FIXME if we have a left-sided country, we need to switch this off and enable it
         // below
         intersection.pop_back();
+        merged = true;
     }
     else if (CanMerge(intersection_node, intersection, 0, 1))
     {
         merged_first = true;
         intersection[0] = merge(intersection.front(), intersection[1]);
         intersection.erase(intersection.begin() + 1);
+        merged = true;
     }
 
     // a merge including the first u-turn requires an adjustment of the turn angles
@@ -329,9 +265,9 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
                 merge(intersection[getRight(index)], intersection[index]);
             intersection.erase(intersection.begin() + index);
             --index;
+            merged = true;
         }
     }
-
     return std::make_pair(intersection, merging_map);
 }
 

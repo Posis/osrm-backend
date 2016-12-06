@@ -784,15 +784,15 @@ Feature: Simple Turns
             | cjk    | Friede | no     |       | tertiary      |
 
         When I route I should get
-            | waypoints | route               | turns                              |
-            | a,g       | Perle,Heide,Heide   | depart,turn right,arrive           |
-            | a,k       | Perle,Friede,Friede | depart,turn left,arrive            |
-            | a,e       | Perle,Perle         | depart,arrive                      |
-            | e,k       | Perle,Friede,Friede | depart,turn right,arrive           |
-            | e,g       | Perle,Heide,Heide   | depart,turn left,arrive            |
-            | h,k       | Heide,Friede,Friede | depart,new name slight left,arrive |
-            | h,e       | Heide,Perle,Perle   | depart,turn right,arrive           |
-            | h,a       | Heide,Perle,Perle   | depart,turn left,arrive            |
+            | waypoints | route               | turns                           |
+            | a,g       | Perle,Heide,Heide   | depart,turn right,arrive        |
+            | a,k       | Perle,Friede,Friede | depart,turn left,arrive         |
+            | a,e       | Perle,Perle         | depart,arrive                   |
+            | e,k       | Perle,Friede,Friede | depart,turn right,arrive        |
+            | e,g       | Perle,Heide,Heide   | depart,turn left,arrive         |
+            | h,k       | Heide,Friede,Friede | depart,new name straight,arrive |
+            | h,e       | Heide,Perle,Perle   | depart,turn right,arrive        |
+            | h,a       | Heide,Perle,Perle   | depart,turn left,arrive         |
 
     #http://www.openstreetmap.org/#map=19/52.53293/13.32956
     Scenario: Curved Exit from Curved Road

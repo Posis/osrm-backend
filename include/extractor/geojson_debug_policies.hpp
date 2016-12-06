@@ -19,8 +19,27 @@ namespace osrm
 namespace extractor
 {
 // generate a visualisation of an intersection, printing the coordinates used for angle calculation
-struct IntersectionPrinter
+struct IntersectionShapePrinter
 {
+    IntersectionShapePrinter(const util::NodeBasedDynamicGraph &node_based_graph,
+                             const std::vector<extractor::QueryNode> &node_coordinates,
+                             const extractor::guidance::CoordinateExtractor &coordinate_extractor);
+
+    // renders the used coordinate locations for all entries/as well as the resulting
+    // intersection-classification
+    util::json::Array operator()(const NodeID intersection_node,
+                                 const extractor::guidance::IntersectionShape &intersection,
+                                 const boost::optional<util::json::Object> &node_style = {},
+                                 const boost::optional<util::json::Object> &way_style = {}) const;
+
+    const util::NodeBasedDynamicGraph &node_based_graph;
+    const std::vector<extractor::QueryNode> &node_coordinates;
+    const extractor::guidance::CoordinateExtractor &coordinate_extractor;
+};
+
+struct IntersectionPrinter : public IntersectionShapePrinter
+{
+    typedef IntersectionShapePrinter Base;
     IntersectionPrinter(const util::NodeBasedDynamicGraph &node_based_graph,
                         const std::vector<extractor::QueryNode> &node_coordinates,
                         const extractor::guidance::CoordinateExtractor &coordinate_extractor);
@@ -31,10 +50,6 @@ struct IntersectionPrinter
                                  const extractor::guidance::Intersection &intersection,
                                  const boost::optional<util::json::Object> &node_style = {},
                                  const boost::optional<util::json::Object> &way_style = {}) const;
-
-    const util::NodeBasedDynamicGraph &node_based_graph;
-    const std::vector<extractor::QueryNode> &node_coordinates;
-    const extractor::guidance::CoordinateExtractor &coordinate_extractor;
 };
 
 } /* namespace extractor */

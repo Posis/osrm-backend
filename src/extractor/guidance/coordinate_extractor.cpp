@@ -651,7 +651,7 @@ bool CoordinateExtractor::IsCurve(const std::vector<util::Coordinate> &coordinat
         const auto end_bearing = util::coordinate_calculation::bearing(
             coordinates[coordinates.size() - 2], coordinates[coordinates.size() - 1]);
 
-        const auto total_angle = angularDeviation(begin_bearing, end_bearing);
+        const auto total_angle = util::angularDeviation(begin_bearing, end_bearing);
         return total_angle > 0.5 * NARROW_TURN_ANGLE;
     }();
 
@@ -770,8 +770,8 @@ bool CoordinateExtractor::IsCurve(const std::vector<util::Coordinate> &coordinat
             const auto detect_invalid_curve = [&](const double previous_angle,
                                                   const double current_angle) {
                 const auto both_actually_turn =
-                    (angularDeviation(previous_angle, STRAIGHT_ANGLE) > FUZZY_ANGLE_DIFFERENCE) &&
-                    (angularDeviation(current_angle, STRAIGHT_ANGLE) > FUZZY_ANGLE_DIFFERENCE);
+                    (util::angularDeviation(previous_angle, STRAIGHT_ANGLE) > FUZZY_ANGLE_DIFFERENCE) &&
+                    (util::angularDeviation(current_angle, STRAIGHT_ANGLE) > FUZZY_ANGLE_DIFFERENCE);
                 // they cannot be straight, since they differ at least by FUZZY_ANGLE_DIFFERENCE
                 const auto turn_direction_switches =
                     (previous_angle > STRAIGHT_ANGLE) == (current_angle < STRAIGHT_ANGLE);
@@ -780,7 +780,7 @@ bool CoordinateExtractor::IsCurve(const std::vector<util::Coordinate> &coordinat
                 if (both_actually_turn && turn_direction_switches)
                     return true;
 
-                const bool is_straight = angularDeviation(current_angle, STRAIGHT_ANGLE) < 5;
+                const bool is_straight = util::angularDeviation(current_angle, STRAIGHT_ANGLE) < 5;
                 ++distance_itr;
                 if (is_straight)
                 {

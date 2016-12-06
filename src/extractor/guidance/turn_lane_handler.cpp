@@ -6,6 +6,7 @@
 #include "util/bearing.hpp"
 #include "util/log.hpp"
 #include "util/typedefs.hpp"
+#include "util/bearing.hpp"
 
 #include <cstddef>
 #include <cstdint>

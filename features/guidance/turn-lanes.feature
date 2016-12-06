@@ -600,11 +600,11 @@ Feature: Turn Lane Guidance
         Given the node map
             """
                         f
-
-            e     d
-                      c g
-            a     b
-
+                        |
+            e - - d_    |
+                   _ >c-g
+            a - - b     |
+                       /
                       h
             """
 

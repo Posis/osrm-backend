@@ -1,5 +1,10 @@
 #include "extractor/extractor.hpp"
 
+#include "extractor/geojson_debug_policies.hpp"
+#include "extractor/guidance/coordinate_extractor.hpp"
+#include "util/geojson_debug_logger.hpp"
+#include "util/geojson_debug_policies.hpp"
+
 #include "extractor/edge_based_edge.hpp"
 #include "extractor/extraction_containers.hpp"
 #include "extractor/extraction_node.hpp"
@@ -251,6 +256,7 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
         std::vector<bool> node_is_startpoint;
         std::vector<EdgeWeight> edge_based_node_weights;
         std::vector<QueryNode> internal_to_external_node_map;
+
         auto graph_size = BuildEdgeExpandedGraph(scripting_environment,
                                                  internal_to_external_node_map,
                                                  edge_based_node_list,
@@ -473,6 +479,14 @@ Extractor::BuildEdgeExpandedGraph(ScriptingEnvironment &scripting_environment,
     std::vector<std::uint32_t> turn_lane_offsets;
     std::vector<guidance::TurnLaneType::Mask> turn_lane_masks;
     std::tie(turn_lane_offsets, turn_lane_masks) = transformTurnLaneMapIntoArrays(turn_lane_map);
+
+    extractor::guidance::CoordinateExtractor coordinate_extractor(
+        *node_based_graph, compressed_edge_container, internal_to_external_node_map);
+    util::ScopedGeojsonLoggerGuard<extractor::IntersectionShapePrinter> guard(
+        "merged_intersections.geojson",
+        *node_based_graph,
+        internal_to_external_node_map,
+        coordinate_extractor);
 
     EdgeBasedGraphFactory edge_based_graph_factory(
         node_based_graph,

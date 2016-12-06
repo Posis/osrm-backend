@@ -5,10 +5,14 @@
 #include "util/guidance/name_announcements.hpp"
 #include "util/log.hpp"
 
+#include "util/coordinate_calculation.hpp"
+#include "util/bearing.hpp"
+
 #include <algorithm>
 #include <cstddef>
 
 using EdgeData = osrm::util::NodeBasedDynamicGraph::EdgeData;
+using osrm::extractor::guidance::getTurnDirection;
 using osrm::util::angularDeviation;
 
 namespace osrm

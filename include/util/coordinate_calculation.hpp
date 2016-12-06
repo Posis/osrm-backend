@@ -95,6 +95,26 @@ inline std::pair<double, FloatCoordinate> projectPointOnSegment(const FloatCoord
             }};
 }
 
+// find the closest distance between a coordinate and a segment
+// O(1)
+double findClosestDistance(const Coordinate coordinate,
+                           const Coordinate segment_begin,
+                           const Coordinate segment_end);
+
+// find the closest distance between a coordinate and a set of coordinates
+// O(|coordinates|)
+double findClosestDistance(const Coordinate coordinate,
+                           const std::vector<util::Coordinate> &coordinates);
+
+// find the closes distance between two sets of coordinates
+// O(|lhs| * |rhs|)
+double findClosestDistance(const std::vector<util::Coordinate> &lhs,
+                           const std::vector<util::Coordinate> &rhs);
+
+// checks if two sets of coordinates describe a parallel set of ways
+bool areParallel(const std::vector<util::Coordinate> &lhs,
+                 const std::vector<util::Coordinate> &rhs);
+
 double perpendicularDistance(const Coordinate segment_source,
                              const Coordinate segment_target,
                              const Coordinate query_location);

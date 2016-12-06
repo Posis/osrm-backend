@@ -190,3 +190,132 @@ Feature: Simple Turns
         When I route I should get
             | waypoints | route        |
             | g,a       | in,road,road |
+
+    @negative
+    Scenario: Traffic Circle
+        Given the node map
+            """
+            a - - - - b - .    e     . - c - - - - d
+                        \     '    '   /
+                            \      /
+                               f
+                               |
+                               |
+                               |
+                               g
+            """
+
+        And the ways
+            | nodes | name   | oneway |
+            | ab    | left   | no     |
+            | bfceb | circle | yes    |
+            | fg    | bottom | no     |
+            | cd    | right  | no     |
+
+        When I route I should get
+            | waypoints | route                           | intersections                                                                                       |
+            | a,d       | left,circle,circle,right,right  | true:90;false:105 true:135 false:270;true:60 true:180 false:315;true:90 false:240 true:255;true:270 |
+            | g,d       | bottom,circle,right,right       | true:0;true:60 false:180 false:315;true:90 false:240 true:255;true:270                              |
+
+
+    Scenario: Traffic Island
+        Given the node map
+            """
+                      f
+            a - - b <   > d - - e
+                      c
+            """
+
+        And the ways
+            | nodes | name | oneway |
+            | ab    | road | no     |
+            | de    | road | no     |
+            | bcdfb | road | yes    |
+
+        When I route I should get
+            | waypoints | route     | intersections    |
+            | a,e       | road,road | true:90;true:270 |
+
+    @negative
+    Scenario: Turning Road, Don't remove sliproads
+        Given the node map
+            """
+            h - - - - - g - - - - - - f - - - - - e
+                               _   '
+                           .
+            a - - - - - b - - - - - - c - - - - - d
+                        |
+                        |
+                        |
+                        i
+            """
+
+        And the ways
+            | nodes | name | oneway |
+            | abcd  | road | yes    |
+            | efgh  | road | yes    |
+            | fb    | road | yes    |
+            | bi    | turn | yes    |
+
+        When I route I should get
+            | waypoints | route          | intersections                                                                  |
+            | a,d       | road,road      | true:90,false:60 true:90 true:180 false:270;true:270                           |
+            | e,h       | road,road      | true:270,false:90 true:240 true:270;true:90                                    |
+            | e,i       | road,turn,turn | true:270;false:90 true:240 true:270,false:60 true:90 true:180 false:270;true:0 |
+
+     @negative
+     Scenario: Meeting Turn Roads
+        Given the node map
+            """
+                        k               l
+                        |               |
+                        |               |
+                        |               |
+            h - - - - - g - - - - - - - f - - - - - e
+                        |   '        '  |
+                        |       x       |
+                        |   .        .  |
+            a - - - - - b - - - - - - - c - - - - - d
+                        |               |
+                        |               |
+                        |               |
+                        i               j
+            """
+
+        And the ways
+            | nodes | name  | oneway |
+            | ab    | horiz | yes    |
+            | bc    | horiz | yes    |
+            | cd    | horiz | yes    |
+            | ef    | horiz | yes    |
+            | fg    | horiz | yes    |
+            | gh    | horiz | yes    |
+            | kg    | vert  | yes    |
+            | gb    | vert  | yes    |
+            | bi    | vert  | yes    |
+            | jc    | vert  | yes    |
+            | cf    | vert  | yes    |
+            | fl    | vert  | yes    |
+            | gx    | horiz | no     |
+            | xc    | horiz | no     |
+            | fx    | horiz | no     |
+            | xb    | horiz | no     |
+
+        And the relations
+            | type        | way:from | way:to | node:via | restriction  |
+            | restriction | bc       | cf     | c        | no_left_turn |
+            | restriction | fg       | gb     | g        | no_left_turn |
+            | restriction | cf       | fg     | f        | no_left_turn |
+            | restriction | gb       | bc     | b        | no_left_turn |
+            | restriction | xb       | bc     | b        | no_left_turn |
+            | restriction | xc       | cf     | c        | no_left_turn |
+            | restriction | xf       | fg     | f        | no_left_turn |
+            | restriction | xg       | gb     | g        | no_left_turn |
+
+        # the goal here should be not to mention the intersection in the middle at all
+        When I route I should get
+            | waypoints | route            | intersections                                                                                              |
+            | a,l       | horiz,vert,vert  | true:90;false:0 true:60 true:90 true:180 false:270, true:0 false:90 false:180 false:240 false:270;true:180 |
+            | a,d       | horiz,horiz      | true:90,false:0 true:60 true:90 true:180 false:270,false:0 true:90 false:180 false:270 true:300;true:270   |
+            | j,h       | vert,horiz,horiz | true:0;true:0 true:90 false:180 false:270 true:300,false:0 false:90 false:120 false:180 true:270;true:90   |
+            | j,l       | vert,vert        | true:0,true:0 true:90 false:180 false:270 true:300,true:0 false:90 false:180 true:240 false:270;true:180   |

@@ -198,20 +198,20 @@ Feature: Collapse
         Given the node map
             """
               n   m
-
-
-
+              |   |
+              |   |
+              |   |
               g   h
-
-
-            c   b   a
-            d   e   f
-
-
+              |   |
+               \ /
+            c - b - a
+            d - e - f
+               / \
+              |   |
               j   i
-
-
-
+              |   |
+              |   |
+              |   |
               k   l
             """
 

@@ -22,7 +22,6 @@ namespace util
 {
 namespace guidance
 {
-
 // Name Change Logic
 // Used both during Extraction as well as during Post-Processing
 
