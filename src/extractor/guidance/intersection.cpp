@@ -48,6 +48,26 @@ ConnectedRoad ConnectedRoad::getMirroredCopy() const
     return copy;
 }
 
+std::string toString(const IntersectionShapeData &shape)
+{
+    std::string result =
+        "[shape] " + std::to_string(shape.eid) + " bearing: " + std::to_string(shape.bearing);
+    return result;
+}
+
+std::string toString(const IntersectionViewData &view)
+{
+    std::string result = "[view] ";
+    result += std::to_string(view.eid);
+    result += " allows entry: ";
+    result += std::to_string(view.entry_allowed);
+    result += " angle: ";
+    result += std::to_string(view.angle);
+    result += " bearing: ";
+    result += std::to_string(view.bearing);
+    return result;
+}
+
 std::string toString(const ConnectedRoad &road)
 {
     std::string result = "[connection] ";

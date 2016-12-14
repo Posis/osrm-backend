@@ -20,7 +20,8 @@ inline auto makeCheckRoadForName(const NameID name_id,
                                  const util::NodeBasedDynamicGraph &node_based_graph)
 {
     return [name_id, &node_based_graph](const MergableRoadDetector::MergableRoadData &road) {
-        return name_id == node_based_graph.GetEdgeData(road.eid).name_id;
+        // since we filter here, we don't want any other name than the one we are looking for
+        return name_id != node_based_graph.GetEdgeData(road.eid).name_id;
     };
 }
 }
@@ -66,19 +67,24 @@ bool MergableRoadDetector::CanMergeRoad(const NodeID intersection_node,
     if (road_target(lhs) == intersection_node || road_target(lhs) == intersection_node)
         return false;
 
+    std::cout << "Base Checks passed" << std::endl;
     // Don't merge link roads
     if (IsLinkRoad(intersection_node, lhs) || IsLinkRoad(intersection_node, rhs))
         return false;
 
+    std::cout << "Not Links roads" << std::endl;
     if (ConnectAgain(intersection_node, lhs, rhs))
         return true;
 
+    std::cout << "Don't Connect" << std::endl;
     if (IsNarrowTriangle(intersection_node, lhs, rhs))
         return true;
 
+    std::cout << "No Triangle" << std::endl;
     if (HaveSameDirection(intersection_node, lhs, rhs))
         return true;
 
+    std::cout << "Not same direction" << std::endl;
     return false;
     // finally check if two roads describe the same way
 }

@@ -114,6 +114,8 @@ struct ConnectedRoad final : IntersectionViewData
 };
 
 // small helper function to print the content of a connected road
+std::string toString(const IntersectionShapeData &shape);
+std::string toString(const IntersectionViewData &view);
 std::string toString(const ConnectedRoad &road);
 
 // Intersections are sorted roads: [0] being the UTurn road, then from sharp right to sharp left.
@@ -238,6 +240,7 @@ template <typename Self> struct EnableIntersectionOps
     auto countNonEnterable() const { return self()->size() - self()->countEnterable(); }
 
     // same as find closests turn but with an additional predicate to allow filtering
+    // the filter has to return `true` for elements that should be ignored
     template <typename UnaryPredicate>
     auto findClosestTurn(const double angle, const UnaryPredicate filter) const
     {
