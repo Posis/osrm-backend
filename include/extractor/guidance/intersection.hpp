@@ -149,14 +149,14 @@ template <typename Self> struct EnableShapeOps
         const auto view = *self() | boost::adaptors::transformed(converter);
         boost::range::find_if(view, extract_maximal_value);
         return initial;
-    };
+    }
 
     // find the maximum value based on a conversion operator and a predefined initial value
     template <typename UnaryPredicate> auto count(const UnaryPredicate detector) const
     {
         BOOST_ASSERT(!self()->empty());
         return std::count_if( self()->begin(),self()->end(),detector);
-    };
+    }
 
   private:
     auto self() { return static_cast<Self *>(this); }

@@ -69,6 +69,13 @@ class MergableRoadDetector
                               const util::NodeBasedEdgeData &rhs_edge_data) const;
 
     /*
+     * Detect traffic loops.
+     * Since OSRM cannot handle loop edges, we cannot directly see a connection between a node and
+     * itself. We need to skip at least a single node in between.
+     */
+    bool IsTrafficLoop(const NodeID intersection_node, const MergableRoadData &road) const;
+
+    /*
      * Detetor to check if we are looking at roads splitting up just prior to entering an
      * intersection:
      *

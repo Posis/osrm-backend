@@ -13,9 +13,6 @@
 #include <numeric>
 #include <utility>
 
-#include <iomanip>
-#include <sstream>
-
 namespace osrm
 {
 namespace util
@@ -505,23 +502,6 @@ bool areParallel(const std::vector<Coordinate> &lhs, const std::vector<Coordinat
     const auto regression_lhs = leastSquareRegression(lhs);
     const auto regression_rhs = leastSquareRegression(rhs);
 
-    const auto get_slope = [](const Coordinate from, const Coordinate to) {
-        const auto diff_lat = static_cast<int>(from.lat) - static_cast<int>(to.lat);
-        const auto diff_lon = static_cast<int>(from.lon) - static_cast<int>(to.lon);
-        if (diff_lon == 0)
-            return std::numeric_limits<double>::max();
-        return static_cast<double>(diff_lat) / static_cast<double>(diff_lon);
-    };
-
-    /*
-    const auto print_coord = [](const Coordinate coord) {
-        std::ostringstream oss;
-        oss << std::setprecision(12) << "[" << util::toFloating(coord.lon) << ", "
-            << util::toFloating(coord.lat) << "]";
-        return oss.str();
-    };
-    */
-
     const auto null_island = Coordinate(FixedLongitude{0}, FixedLatitude{0});
     const auto difference_lhs = difference(regression_lhs.first, regression_lhs.second);
     const auto difference_rhs = difference(regression_rhs.first, regression_rhs.second);
@@ -532,13 +512,17 @@ bool areParallel(const std::vector<Coordinate> &lhs, const std::vector<Coordinat
 
     // we rotate to have one of the lines facing horizontally to the right (bearing 90 degree)
     const auto rotation_angle_radians = degToRad(bearing_lhs - 90);
-
-    //const auto rotated_difference_lhs = rotateCCWAroundZero(difference_lhs, rotation_angle_radians);
     const auto rotated_difference_rhs = rotateCCWAroundZero(difference_rhs, rotation_angle_radians);
 
-    //const auto slope_lhs = get_slope(null_island, rotated_difference_lhs);
-    const auto slope_rhs = get_slope(null_island, rotated_difference_rhs);
+    const auto get_slope = [](const Coordinate from, const Coordinate to) {
+        const auto diff_lat = static_cast<int>(from.lat) - static_cast<int>(to.lat);
+        const auto diff_lon = static_cast<int>(from.lon) - static_cast<int>(to.lon);
+        if (diff_lon == 0)
+            return std::numeric_limits<double>::max();
+        return static_cast<double>(diff_lat) / static_cast<double>(diff_lon);
+    };
 
+    const auto slope_rhs = get_slope(null_island, rotated_difference_rhs);
     // the left hand side has a slope of `0` after the rotation. We can check the slope of the right
     // hand side to ensure we only considering slight slopes
     return std::abs(slope_rhs) < 0.20; // twenty percent incline at the most

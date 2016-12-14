@@ -202,7 +202,6 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
     if (intersection.size() <= 1)
         return std::make_pair(intersection, merging_map);
 
-    bool merged = false;
     const auto intersection_copy = intersection;
     // check for merges including the basic u-turn
     // these result in an adjustment of all other angles. This is due to how these angles are
@@ -235,24 +234,19 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
     // If the merge occurs at the u-turn edge, we need to adjust all angles, though, since they are
     // with respect to the now changed perceived location of a. If we move (a) to the left, we add
     // the difference to all angles. Otherwise we subtract it.
-    bool merged_first = false;
     // these result in an adjustment of all other angles
     if (CanMerge(intersection_node, intersection, intersection.size() - 1, 0))
     {
-        merged_first = true;
         // moving `a` to the left
         intersection[0] = merge(intersection.front(), intersection.back());
         // FIXME if we have a left-sided country, we need to switch this off and enable it
         // below
         intersection.pop_back();
-        merged = true;
     }
     else if (CanMerge(intersection_node, intersection, 0, 1))
     {
-        merged_first = true;
         intersection[0] = merge(intersection.front(), intersection[1]);
         intersection.erase(intersection.begin() + 1);
-        merged = true;
     }
 
     // a merge including the first u-turn requires an adjustment of the turn angles
@@ -265,7 +259,6 @@ IntersectionNormalizer::MergeSegregatedRoads(const NodeID intersection_node,
                 merge(intersection[getRight(index)], intersection[index]);
             intersection.erase(intersection.begin() + index);
             --index;
-            merged = true;
         }
     }
     return std::make_pair(intersection, merging_map);

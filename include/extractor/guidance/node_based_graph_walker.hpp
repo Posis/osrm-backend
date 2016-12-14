@@ -118,6 +118,7 @@ struct SelectRoadByNameOnlyChoiceAndStraightness
 struct SelectStraightmostRoadByNameAndOnlyChoice
 {
     SelectStraightmostRoadByNameAndOnlyChoice(const NameID desired_name_id,
+                                              const double initial_bearing,
                                               const bool requires_entry);
 
     /*
@@ -132,6 +133,7 @@ struct SelectStraightmostRoadByNameAndOnlyChoice
                                        const util::NodeBasedDynamicGraph &node_based_graph) const;
 
     const NameID desired_name_id;
+    const double initial_bearing;
     const bool requires_entry;
 };
 

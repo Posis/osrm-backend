@@ -99,8 +99,9 @@ operator()(const NodeID /*nid*/,
 
 // ---------------------------------------------------------------------------------
 SelectStraightmostRoadByNameAndOnlyChoice::SelectStraightmostRoadByNameAndOnlyChoice(
-    const NameID desired_name_id, const bool requires_entry)
-    : desired_name_id(desired_name_id), requires_entry(requires_entry)
+    const NameID desired_name_id, const double initial_bearing, const bool requires_entry)
+    : desired_name_id(desired_name_id), initial_bearing(initial_bearing),
+      requires_entry(requires_entry)
 {
 }
 
@@ -111,6 +112,9 @@ operator()(const NodeID /*nid*/,
            const util::NodeBasedDynamicGraph &node_based_graph) const
 {
     BOOST_ASSERT(!intersection.empty());
+    if (intersection.size() == 1)
+        return {};
+
     const auto comparator = [this, &node_based_graph](const IntersectionViewData &lhs,
                                                       const IntersectionViewData &rhs) {
         // the score of an elemnt results in an ranking preferring valid entries, if required over
@@ -131,11 +135,31 @@ operator()(const NodeID /*nid*/,
         return score(lhs) < score(rhs);
     };
 
+    const auto count_desired_name =
+        std::count_if(std::begin(intersection),
+                      std::end(intersection),
+                      [this, &node_based_graph](const auto &road) {
+                          return node_based_graph.GetEdgeData(road.eid).name_id == desired_name_id;
+                      });
+    if (count_desired_name > 2)
+        return {};
+
     const auto min_element =
         std::min_element(std::next(std::begin(intersection)), std::end(intersection), comparator);
 
-    if (min_element == intersection.end() || (requires_entry && !min_element->entry_allowed) ||
-        (intersection.size() > 2 && intersection.findClosestTurn(STRAIGHT_ANGLE) != min_element))
+    const auto is_valid_choice = !requires_entry || min_element->entry_allowed;
+    const auto is_only_choice_with_same_name =
+        intersection.size() == 2 &&
+        node_based_graph.GetEdgeData(min_element->eid).name_id == desired_name_id;
+    const auto has_valid_angle =
+        ((intersection.size() == 2 ||
+          intersection.findClosestTurn(STRAIGHT_ANGLE) == min_element) &&
+         angularDeviation(min_element->angle, STRAIGHT_ANGLE) < NARROW_TURN_ANGLE) &&
+        angularDeviation(initial_bearing, min_element->bearing) < NARROW_TURN_ANGLE;
+
+    // in cases where we have two edges between roads, we can have quite severe angles due to the
+    // random split OSRM does to break up parallel edges at any coordinate
+    if (!is_valid_choice || !(is_only_choice_with_same_name || has_valid_angle))
         return {};
     else
         return (*min_element).eid;

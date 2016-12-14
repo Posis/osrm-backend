@@ -163,7 +163,7 @@ inline double angleBetween(const double lhs, const double rhs)
         return angle_between_candidate;
     else
         return restrictAngleToValidRange(angle_between_candidate + 180);
-};
+}
 
 } // namespace util
 } // namespace osrm

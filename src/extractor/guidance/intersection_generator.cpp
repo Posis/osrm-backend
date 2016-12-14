@@ -157,8 +157,8 @@ IntersectionView IntersectionGenerator::GetConnectedRoads(const NodeID from_node
     return TransformIntersectionShapeIntoView(from_node, via_eid, std::move(intersection));
 }
 
-std::pair<NodeID, EdgeID> IntersectionGenerator::SkipDegreeTwoNodes(const NodeID starting_node,
-                                                                    const EdgeID via_edge) const
+IntersectionGenerationParameters
+IntersectionGenerator::SkipDegreeTwoNodes(const NodeID starting_node, const EdgeID via_edge) const
 {
     NodeID query_node = starting_node;
     EdgeID query_edge = via_edge;
@@ -180,16 +180,17 @@ std::pair<NodeID, EdgeID> IntersectionGenerator::SkipDegreeTwoNodes(const NodeID
         visited_nodes.insert(query_node);
         const auto next_node = node_based_graph.GetTarget(query_edge);
         const auto next_edge = get_next_edge(query_node, query_edge);
+
+        query_node = next_node;
+        query_edge = next_edge;
+
         if (!node_based_graph.GetEdgeData(query_edge)
                  .IsCompatibleTo(node_based_graph.GetEdgeData(next_edge)) ||
             node_based_graph.GetTarget(next_edge) == starting_node)
             break;
-
-        query_node = next_node;
-        query_edge = next_edge;
     }
 
-    return std::make_pair(query_node, query_edge);
+    return {query_node, query_edge};
 }
 
 IntersectionView IntersectionGenerator::TransformIntersectionShapeIntoView(
@@ -282,8 +283,7 @@ IntersectionView IntersectionGenerator::TransformIntersectionShapeIntoView(
                              connect_to_previous_node);
             BOOST_ASSERT(uturn_edge_at_normalised_intersection_itr !=
                          normalised_intersection.end());
-            return util::bearing::reverse(
-                uturn_edge_at_normalised_intersection_itr->bearing);
+            return util::bearing::reverse(uturn_edge_at_normalised_intersection_itr->bearing);
         }
     }();
 

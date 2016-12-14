@@ -27,8 +27,7 @@ operator()(const NodeID intersection_node,
     // request the number of lanes. This process needs to be in sync with what happens over at
     // intersection_generator
     const auto road_as_number_of_lanes = guidance::makeExtractLanesForRoad(node_based_graph);
-    const auto intersection_lanes =
-        intersection.findMaximum(road_as_number_of_lanes);
+    const auto intersection_lanes = intersection.findMaximum(road_as_number_of_lanes);
 
     std::vector<util::Coordinate> coordinates;
     coordinates.reserve(intersection.size());
@@ -72,7 +71,9 @@ IntersectionPrinter::IntersectionPrinter(
     const util::NodeBasedDynamicGraph &node_based_graph,
     const std::vector<extractor::QueryNode> &node_coordinates,
     const extractor::guidance::CoordinateExtractor &coordinate_extractor)
-    : IntersectionShapePrinter(node_based_graph, node_coordinates, coordinate_extractor){};
+    : IntersectionShapePrinter(node_based_graph, node_coordinates, coordinate_extractor)
+{
+}
 
 util::json::Array IntersectionPrinter::
 operator()(const NodeID intersection_node,
