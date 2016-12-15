@@ -75,7 +75,7 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
     util::ShM<util::Coordinate, true>::vector m_coordinate_list;
     util::PackedVector<OSMNodeID, true> m_osmnodeid_list;
     util::ShM<GeometryID, true>::vector m_via_geometry_list;
-    util::ShM<unsigned, true>::vector m_name_ID_list;
+    util::ShM<NameID, true>::vector m_name_ID_list;
     util::ShM<LaneDataID, true>::vector m_lane_data_id;
     util::ShM<extractor::guidance::TurnInstruction, true>::vector m_turn_instruction_list;
     util::ShM<extractor::TravelMode, true>::vector m_travel_mode_list;
@@ -88,7 +88,7 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
     util::ShM<EdgeWeight, true>::vector m_geometry_fwd_weight_list;
     util::ShM<EdgeWeight, true>::vector m_geometry_rev_weight_list;
     util::ShM<bool, true>::vector m_is_core_node;
-    util::ShM<uint8_t, true>::vector m_datasource_list;
+    util::ShM<DatasourceID, true>::vector m_datasource_list;
     util::ShM<std::uint32_t, true>::vector m_lane_description_offsets;
     util::ShM<extractor::guidance::TurnLaneType::Mask, true>::vector m_lane_description_masks;
 
@@ -227,8 +227,8 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         m_turn_instruction_list = std::move(turn_instruction_list);
 
         const auto name_id_list_ptr =
-            data_layout.GetBlockPtr<unsigned>(memory_block, storage::DataLayout::NAME_ID_LIST);
-        util::ShM<unsigned, true>::vector name_id_list(
+            data_layout.GetBlockPtr<NameID>(memory_block, storage::DataLayout::NAME_ID_LIST);
+        util::ShM<NameID, true>::vector name_id_list(
             name_id_list_ptr, data_layout.num_entries[storage::DataLayout::NAME_ID_LIST]);
         m_name_ID_list = std::move(name_id_list);
 
@@ -336,9 +336,9 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
             data_layout.num_entries[storage::DataLayout::GEOMETRIES_REV_WEIGHT_LIST]);
         m_geometry_rev_weight_list = std::move(geometry_rev_weight_list);
 
-        auto datasources_list_ptr =
-            data_layout.GetBlockPtr<uint8_t>(memory_block, storage::DataLayout::DATASOURCES_LIST);
-        util::ShM<uint8_t, true>::vector datasources_list(
+        auto datasources_list_ptr = data_layout.GetBlockPtr<DatasourceID>(
+            memory_block, storage::DataLayout::DATASOURCES_LIST);
+        util::ShM<DatasourceID, true>::vector datasources_list(
             datasources_list_ptr, data_layout.num_entries[storage::DataLayout::DATASOURCES_LIST]);
         m_datasource_list = std::move(datasources_list);
 
@@ -470,7 +470,7 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         return m_coordinate_list[id];
     }
 
-    OSMNodeID GetOSMNodeIDOfNode(const unsigned id) const override final
+    OSMNodeID GetOSMNodeIDOfNode(const NodeID id) const override final
     {
         return m_osmnodeid_list.at(id);
     }
@@ -571,18 +571,18 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         return result_weights;
     }
 
-    virtual GeometryID GetGeometryIndexForEdgeID(const unsigned id) const override final
+    virtual GeometryID GetGeometryIndexForEdgeID(const EdgeID id) const override final
     {
         return m_via_geometry_list.at(id);
     }
 
     extractor::guidance::TurnInstruction
-    GetTurnInstructionForEdgeID(const unsigned id) const override final
+    GetTurnInstructionForEdgeID(const EdgeID id) const override final
     {
         return m_turn_instruction_list.at(id);
     }
 
-    extractor::TravelMode GetTravelModeForEdgeID(const unsigned id) const override final
+    extractor::TravelMode GetTravelModeForEdgeID(const EdgeID id) const override final
     {
         return m_travel_mode_list.at(id);
     }
@@ -704,14 +704,14 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
 
     unsigned GetCheckSum() const override final { return m_check_sum; }
 
-    unsigned GetNameIndexFromEdgeID(const unsigned id) const override final
+    NameID GetNameIndexFromEdgeID(const EdgeID id) const override final
     {
         return m_name_ID_list.at(id);
     }
 
-    std::string GetNameForID(const unsigned name_id) const override final
+    std::string GetNameForID(const NameID name_id) const override final
     {
-        if (std::numeric_limits<unsigned>::max() == name_id)
+        if (std::numeric_limits<NameID>::max() == name_id)
         {
             return "";
         }
@@ -729,7 +729,30 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         return result;
     }
 
-    std::string GetRefForID(const unsigned name_id) const override final
+    virtual StringView GetNameForID2(const NameID id) const override final
+    {
+        if (std::numeric_limits<NameID>::max() == id)
+        {
+            return {};
+        }
+
+        auto range = m_name_table->GetRange(id);
+
+        if (range.begin() == range.end())
+        {
+            return {};
+        }
+
+        auto first = m_names_char_list.begin() + range.front();
+        auto last = m_names_char_list.begin() + range.back() + 1;
+        // These iterators are useless: they're InputIterators onto a contiguous block of memory.
+        // Deref to get to the first element, then Addressof to get the memory address of the it.
+        auto len = &*last - &*first;
+
+        return StringView{&*first, len};
+    }
+
+    virtual std::string GetRefForID(const NameID name_id) const override final
     {
         // We store the ref after the name, destination and pronunciation of a street.
         // We do this to get around the street length limit of 255 which would hit
@@ -738,7 +761,16 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         return GetNameForID(name_id + 3);
     }
 
-    std::string GetPronunciationForID(const unsigned name_id) const override final
+    virtual StringView GetRefForID2(const NameID id) const override final
+    {
+        // We store the ref after the name, destination and pronunciation of a street.
+        // We do this to get around the street length limit of 255 which would hit
+        // if we concatenate these. Order (see extractor_callbacks):
+        // name (0), destination (1), pronunciation (2), ref (3)
+        return GetNameForID2(id + 3);
+    }
+
+    virtual std::string GetPronunciationForID(const NameID name_id) const override final
     {
         // We store the pronunciation after the name and destination of a street.
         // We do this to get around the street length limit of 255 which would hit
@@ -747,13 +779,31 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         return GetNameForID(name_id + 2);
     }
 
-    std::string GetDestinationsForID(const unsigned name_id) const override final
+    virtual StringView GetPronunciationForID2(const NameID id) const override final
+    {
+        // We store the pronunciation after the name and destination of a street.
+        // We do this to get around the street length limit of 255 which would hit
+        // if we concatenate these. Order (see extractor_callbacks):
+        // name (0), destination (1), pronunciation (2), ref (3)
+        return GetNameForID2(id + 2);
+    }
+
+    virtual std::string GetDestinationsForID(const NameID name_id) const override final
     {
         // We store the destination after the name of a street.
         // We do this to get around the street length limit of 255 which would hit
         // if we concatenate these. Order (see extractor_callbacks):
         // name (0), destination (1), pronunciation (2), ref (3)
         return GetNameForID(name_id + 1);
+    }
+
+    virtual StringView GetDestinationsForID2(const NameID id) const override final
+    {
+        // We store the destination after the name of a street.
+        // We do this to get around the street length limit of 255 which would hit
+        // if we concatenate these. Order (see extractor_callbacks):
+        // name (0), destination (1), pronunciation (2), ref (3)
+        return GetNameForID2(id + 1);
     }
 
     bool IsCoreNode(const NodeID id) const override final
@@ -770,7 +820,7 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
 
     // Returns the data source ids that were used to supply the edge
     // weights.
-    virtual std::vector<uint8_t>
+    virtual std::vector<DatasourceID>
     GetUncompressedForwardDatasources(const EdgeID id) const override final
     {
         /*
@@ -785,7 +835,7 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         const unsigned begin = m_geometry_indices.at(id) + 1;
         const unsigned end = m_geometry_indices.at(id + 1);
 
-        std::vector<uint8_t> result_datasources;
+        std::vector<DatasourceID> result_datasources;
         result_datasources.resize(end - begin);
 
         // If there was no datasource info, return an array of 0's.
@@ -808,7 +858,7 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
 
     // Returns the data source ids that were used to supply the edge
     // weights.
-    virtual std::vector<uint8_t>
+    virtual std::vector<DatasourceID>
     GetUncompressedReverseDatasources(const EdgeID id) const override final
     {
         /*
@@ -823,7 +873,7 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         const unsigned begin = m_geometry_indices.at(id);
         const unsigned end = m_geometry_indices.at(id + 1) - 1;
 
-        std::vector<uint8_t> result_datasources;
+        std::vector<DatasourceID> result_datasources;
         result_datasources.resize(end - begin);
 
         // If there was no datasource info, return an array of 0's.
@@ -844,7 +894,8 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         return result_datasources;
     }
 
-    virtual std::string GetDatasourceName(const uint8_t datasource_name_id) const override final
+    virtual std::string
+    GetDatasourceName(const DatasourceID datasource_name_id) const override final
     {
         BOOST_ASSERT(m_datasource_name_offsets.size() >= 1);
         BOOST_ASSERT(m_datasource_name_offsets.size() > datasource_name_id);
@@ -857,6 +908,21 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
                   std::back_inserter(result));
 
         return result;
+    }
+
+    virtual StringView GetDatasourceName2(const DatasourceID id) const override final
+    {
+        BOOST_ASSERT(m_datasource_name_offsets.size() >= 1);
+        BOOST_ASSERT(m_datasource_name_offsets.size() > id);
+
+        auto first = m_datasource_name_data.begin() + m_datasource_name_offsets[id];
+        auto last = m_datasource_name_data.begin() + m_datasource_name_offsets[id] +
+                    m_datasource_name_lengths[id];
+        // These iterators are useless: they're InputIterators onto a contiguous block of memory.
+        // Deref to get to the first element, then Addressof to get the memory address of the it.
+        auto len = &*last - &*first;
+
+        return StringView{&*first, len};
     }
 
     std::string GetTimestamp() const override final { return m_timestamp; }

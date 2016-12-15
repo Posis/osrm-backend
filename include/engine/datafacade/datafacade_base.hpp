@@ -27,6 +27,9 @@
 #include <utility>
 #include <vector>
 
+#include <boost/utility/string_ref.hpp>
+using StringView = boost::string_ref;
+
 namespace osrm
 {
 namespace engine
@@ -74,10 +77,10 @@ class BaseDataFacade
                                     const std::function<bool(EdgeData)> filter) const = 0;
 
     // node and edge information access
-    virtual util::Coordinate GetCoordinateOfNode(const unsigned id) const = 0;
-    virtual OSMNodeID GetOSMNodeIDOfNode(const unsigned id) const = 0;
+    virtual util::Coordinate GetCoordinateOfNode(const NodeID id) const = 0;
+    virtual OSMNodeID GetOSMNodeIDOfNode(const NodeID id) const = 0;
 
-    virtual GeometryID GetGeometryIndexForEdgeID(const unsigned id) const = 0;
+    virtual GeometryID GetGeometryIndexForEdgeID(const EdgeID id) const = 0;
 
     virtual std::vector<NodeID> GetUncompressedForwardGeometry(const EdgeID id) const = 0;
 
@@ -91,16 +94,17 @@ class BaseDataFacade
 
     // Returns the data source ids that were used to supply the edge
     // weights.  Will return an empty array when only the base profile is used.
-    virtual std::vector<uint8_t> GetUncompressedForwardDatasources(const EdgeID id) const = 0;
-    virtual std::vector<uint8_t> GetUncompressedReverseDatasources(const EdgeID id) const = 0;
+    virtual std::vector<DatasourceID> GetUncompressedForwardDatasources(const EdgeID id) const = 0;
+    virtual std::vector<DatasourceID> GetUncompressedReverseDatasources(const EdgeID id) const = 0;
 
     // Gets the name of a datasource
-    virtual std::string GetDatasourceName(const uint8_t datasource_name_id) const = 0;
+    virtual std::string GetDatasourceName(const DatasourceID id) const = 0;
+    virtual StringView GetDatasourceName2(const DatasourceID id) const = 0;
 
     virtual extractor::guidance::TurnInstruction
-    GetTurnInstructionForEdgeID(const unsigned id) const = 0;
+    GetTurnInstructionForEdgeID(const EdgeID id) const = 0;
 
-    virtual extractor::TravelMode GetTravelModeForEdgeID(const unsigned id) const = 0;
+    virtual extractor::TravelMode GetTravelModeForEdgeID(const EdgeID id) const = 0;
 
     virtual std::vector<RTreeLeaf> GetEdgesInBox(const util::Coordinate south_west,
                                                  const util::Coordinate north_east) const = 0;
@@ -157,15 +161,19 @@ class BaseDataFacade
 
     virtual bool IsCoreNode(const NodeID id) const = 0;
 
-    virtual unsigned GetNameIndexFromEdgeID(const unsigned id) const = 0;
+    virtual NameID GetNameIndexFromEdgeID(const EdgeID id) const = 0;
 
-    virtual std::string GetNameForID(const unsigned name_id) const = 0;
+    virtual std::string GetNameForID(const NameID id) const = 0;
+    virtual StringView GetNameForID2(const NameID id) const = 0;
 
-    virtual std::string GetRefForID(const unsigned name_id) const = 0;
+    virtual std::string GetRefForID(const NameID id) const = 0;
+    virtual StringView GetRefForID2(const NameID id) const = 0;
 
-    virtual std::string GetPronunciationForID(const unsigned name_id) const = 0;
+    virtual std::string GetPronunciationForID(const NameID id) const = 0;
+    virtual StringView GetPronunciationForID2(const NameID id) const = 0;
 
-    virtual std::string GetDestinationsForID(const unsigned name_id) const = 0;
+    virtual std::string GetDestinationsForID(const NameID id) const = 0;
+    virtual StringView GetDestinationsForID2(const NameID id) const = 0;
 
     virtual std::size_t GetCoreSize() const = 0;
 

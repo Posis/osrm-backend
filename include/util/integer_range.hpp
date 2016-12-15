@@ -39,6 +39,7 @@ template <typename Integer> class range
 
     // Iterator functions
     bool operator!=(const range &) const noexcept { return iter < last; }
+    bool operator==(const range &other) const noexcept { return !operator!=(other); }
     void operator++() noexcept { ++iter; }
     Integer operator*() const noexcept { return iter; }
 };
