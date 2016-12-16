@@ -181,9 +181,10 @@ template <typename Self> struct EnableIntersectionOps
         return std::min_element(self()->begin(), self()->end(), comp);
     }
 
-    // Check validity of the intersection object. We assume a few basic properties every set of
-    // connected roads should follow throughout guidance pre-processing. This utility function
-    // allows checking intersections for validity
+    /* Check validity of the intersection object. We assume a few basic properties every set of
+     * connected roads should follow throughout guidance pre-processing. This utility function
+     * allows checking intersections for validity
+     */
     auto valid() const
     {
         if (self()->empty())
@@ -274,13 +275,6 @@ struct Intersection final : std::vector<ConnectedRoad>,         //
                             EnableIntersectionOps<Intersection> //
 {
     using Base = std::vector<ConnectedRoad>;
-
-    /*
-     * Check validity of the intersection object. We assume a few basic properties every set of
-     * connected roads should follow throughout guidance pre-processing. This utility function
-     * allows checking intersections for validity
-     */
-    bool valid() const;
 };
 
 } // namespace guidance
